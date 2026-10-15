@@ -34,6 +34,12 @@ await play.saveData("settings", { sound: true, quality: "high" });
 const settings = await play.loadData<{ sound: boolean; quality: string }>("settings");
 const savedSettings = await play.getSavedData("settings"); // value + updatedAt
 await play.deleteSavedData("settings");
+
+// Game achievements are defined by the publisher in Banana Developers.
+// Claim only after your game logic confirms the milestone is earned.
+const achievements = await play.getAchievements("my-game");
+const claim = await play.claimAchievement("my-game", "first-win");
+if (claim.claimed) console.log("Achievement unlocked:", claim.achievement.title);
 ```
 
 ### Scopes
@@ -44,8 +50,27 @@ await play.deleteSavedData("settings");
 | `getSavedData()` / `loadData()` | `play:data:read` |
 | `saveData()` / `deleteSavedData()` | `play:data:write` |
 | activity methods | `play:presence:write` |
+| `getAchievements()` / `claimAchievement()` | `play:achievements:write` |
 
 The SDK follows the current API limits: data keys are 1–128 characters (`A–Z`, `a–z`, digits, `.`, `_`, `:`, `-`); values are JSON and at most 64 KiB each; up to 256 keys and 1 MiB total per player/game; 30 save/delete writes per minute; activity text up to 80 characters; activity TTL 30–180 seconds. The server remains authoritative.
+
+
+### Game achievements
+
+Create game achievements in Banana Developers → **Games** → the game's **Achievements** panel. Each achievement has a stable ID, display name, description, and optional XP reward. Use an ID such as `first-win` in your game code:
+
+```ts
+const achievements = await play.getAchievements("my-game");
+if (!achievements.some((item) => item.achievementId === "first-win" && item.unlocked)) {
+  // The actual condition must be checked by your game first.
+  const result = await play.claimAchievement("my-game", "first-win");
+  if (result.claimed) {
+    console.log(result.achievement.title, result.achievement.xp, "XP");
+  }
+}
+```
+
+Request the `play:achievements:write` scope for these methods. Banana verifies that the OAuth app belongs to the game's publisher, the player is allowed to access that game's age rating, the achievement is defined by the developer, and each player can claim it only once. Repeating a claim is safe and returns `alreadyUnlocked: true` without awarding XP again. **The SDK does not decide whether the achievement condition was met**; call `claimAchievement()` only after validating it in your game logic, and keep competitive or high-value conditions server-side.
 
 ## Change a player's activity
 
