@@ -1,7 +1,7 @@
 {
   "name": "bananakitssu-playsdk",
   "version": "0.1.0",
-  "description": "Unofficial? no - Banana Play game SDK for saved data, presence, and WebRTC packet servers.",
+  "description": "Banana Play game SDK for saved data, player presence, and WebRTC packet servers.",
   "type": "module",
   "license": "MIT",
   "engines": { "node": ">=22" },
@@ -20,6 +20,7 @@
   "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
     "test": "tsx --test tests/*.test.ts",
     "check": "npm run build && npm test"
   },
