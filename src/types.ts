@@ -38,6 +38,35 @@ export interface DeleteDataResult {
   deleted: boolean;
 }
 
+export interface GameAchievement {
+  achievementId: string;
+  title: string;
+  description: string;
+  xp: number;
+  unlocked: boolean;
+  unlockedAt: number | null;
+}
+
+export interface GameAchievementListResult {
+  slug: string;
+  achievements: GameAchievement[];
+}
+
+export interface ClaimedAchievement {
+  achievementId: string;
+  title: string;
+  description?: string;
+  xp: number;
+  unlockedAt: number;
+}
+
+export interface ClaimAchievementResult {
+  ok: true;
+  claimed: boolean;
+  alreadyUnlocked?: boolean;
+  achievement: ClaimedAchievement;
+}
+
 export interface ActivityResult {
   ok: true;
   statusText: string;
