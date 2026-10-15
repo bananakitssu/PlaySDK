@@ -60,7 +60,7 @@ export class RServer extends EventEmitter {
       throw new RangeError("maxPacketBytes must be a positive integer.");
     }
     this.options = {
-      iceServers: options.iceServers,
+      ...(options.iceServers === undefined ? {} : { iceServers: options.iceServers }),
       dataChannelLabel: options.dataChannelLabel ?? "rserver",
       maxPacketBytes,
     };
