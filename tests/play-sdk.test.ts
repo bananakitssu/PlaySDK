@@ -78,3 +78,39 @@ test("API errors preserve error codes and retry-after", async () => {
     return true;
   });
 });
+
+
+test("getAchievements reads developer-defined achievements and player unlock state", async () => {
+  const { client, calls } = mockedSDK(() => jsonResponse({
+    slug: "my-game",
+    achievements: [{
+      achievementId: "first-win", title: "First win", description: "Win a match",
+      xp: 50, unlocked: false, unlockedAt: null,
+    }],
+  }));
+  const achievements = await client.getAchievements("My-Game");
+  assert.equal(achievements[0]?.achievementId, "first-win");
+  assert.equal(achievements[0]?.unlocked, false);
+  assert.match(calls[0]!.url, /\/achievements\?slug=my-game$/);
+  assert.equal(new Headers(calls[0]!.init.headers).get("authorization"), "Bearer test-token");
+});
+
+test("claimAchievement posts a stable ID and safely handles an already-claimed result", async () => {
+  const { client, calls } = mockedSDK(() => jsonResponse({
+    ok: true, claimed: false, alreadyUnlocked: true,
+    achievement: { achievementId: "first-win", title: "First win", xp: 50, unlockedAt: 1_800_000_000 },
+  }));
+  const result = await client.claimAchievement("my-game", "First-Win");
+  assert.equal(result.claimed, false);
+  assert.equal(result.alreadyUnlocked, true);
+  assert.deepEqual(JSON.parse(String(calls[0]!.init.body)), { slug: "my-game", achievementId: "first-win" });
+  assert.equal(calls[0]!.init.method, "POST");
+  assert.match(calls[0]!.url, /\/achievements$/);
+});
+
+test("achievement slug and ID validation reject malformed input before network access", async () => {
+  const { client, calls } = mockedSDK(() => jsonResponse({ ok: true, claimed: true }));
+  await assert.rejects(client.getAchievements("../bad"), TypeError);
+  await assert.rejects(client.claimAchievement("my-game", "../admin"), TypeError);
+  assert.equal(calls.length, 0);
+});

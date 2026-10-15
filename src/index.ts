@@ -3,6 +3,9 @@ import type {
   ActivityOptions,
   ActivityResult,
   DeleteDataResult,
+  GameAchievement,
+  GameAchievementListResult,
+  ClaimAchievementResult,
   PlaySDKOptions,
   PlayerProfile,
   SavedDataResult,
@@ -14,6 +17,10 @@ export type {
   ActivityOptions,
   ActivityResult,
   DeleteDataResult,
+  GameAchievement,
+  GameAchievementListResult,
+  ClaimedAchievement,
+  ClaimAchievementResult,
   PlaySDKOptions,
   PlayerProfile,
   SavedDataResult,
@@ -72,6 +79,22 @@ function normalizeActivity(statusText: string): string {
   return normalized;
 }
 
+function validateGameSlug(gameSlug: string): string {
+  const slug = typeof gameSlug === "string" ? gameSlug.trim().toLowerCase() : "";
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,54}[a-z0-9])?$/.test(slug)) {
+    throw new TypeError("A valid Banana Play game slug is required.");
+  }
+  return slug;
+}
+
+function validateAchievementId(achievementId: string): string {
+  const id = typeof achievementId === "string" ? achievementId.trim().toLowerCase() : "";
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(id)) {
+    throw new TypeError("Achievement IDs must be 1–64 lowercase letters, numbers, underscores, or hyphens.");
+  }
+  return id;
+}
+
 function jsonByteLength(value: unknown): number {
   const serialized = JSON.stringify(value);
   if (typeof serialized !== "string") {
@@ -88,6 +111,7 @@ function jsonByteLength(value: unknown): number {
  * - play:data:write for saveData()/deleteSavedData()
  * - play:profile:read for getProfile()
  * - play:presence:write for setActivity()/clearActivity()/startActivity()
+ * - play:achievements:write for getAchievements()/claimAchievement()
  */
 export class PlaySDK {
   private readonly accessToken: string;
@@ -138,6 +162,29 @@ export class PlaySDK {
     }
 
     return body as T;
+  }
+
+  /**
+   * Read the achievement definitions for a game, including which achievements this player has
+   * already unlocked. The Play OAuth app must belong to that game's publisher.
+   */
+  async getAchievements(gameSlug: string): Promise<GameAchievement[]> {
+    const slug = validateGameSlug(gameSlug);
+    const result = await this.request<GameAchievementListResult>(`/achievements?slug=${encodeURIComponent(slug)}`);
+    return result.achievements;
+  }
+
+  /**
+   * Claim a developer-defined achievement for the current player. Claims are idempotent: a
+   * repeat claim returns alreadyUnlocked=true and does not award the XP again.
+   */
+  async claimAchievement(gameSlug: string, achievementId: string): Promise<ClaimAchievementResult> {
+    const slug = validateGameSlug(gameSlug);
+    const id = validateAchievementId(achievementId);
+    return this.request<ClaimAchievementResult>("/achievements", {
+      method: "POST",
+      body: JSON.stringify({ slug, achievementId: id }),
+    });
   }
 
   /** Read the player's own profile, or an accepted friend's profile by user ID. */
